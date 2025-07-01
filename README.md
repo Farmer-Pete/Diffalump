@@ -22,7 +22,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv run python main.py
 ```
 
-You can find a AI prompt that works well with Diffalump in [prompt.txt](prompt.txt)
+You can find a AI prompt that works well with Diffalump in [prompt.md](prompt.md)
 
 ## License
 
