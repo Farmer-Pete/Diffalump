@@ -25,7 +25,11 @@ class FileChunk:
 
 def get_git_diff(directory: str, base: str, target: str) -> PatchSet:
     repo = Repo(directory)
-    diff_text = repo.git.diff(f"{base}..{target}", unified=CONTEXT_LINE_COUNT)
+    diff_text = repo.git.diff(
+        f"{base}..{target}",
+        unified=CONTEXT_LINE_COUNT,
+        histogram=True,
+    )
     return PatchSet(diff_text)
 
 
