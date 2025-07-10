@@ -1,0 +1,44 @@
+diff --git c/.gitignore w/.gitignore
+index 505a3b1..edc5668 100644
+
+@@ -6,5 +6,8 @@ dist/
+ wheels/
+ *.egg-info
+ 
+ # Virtual environments
+ .venv
++
++# Temporary files
++*.diff
+diff --git c/README.md w/README.md
+index be6edff..c1ed3f2 100644
+
+@@ -20,10 +20,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
+ 
+ ```bash
+ uv run python main.py
+ ```
+ 
+-You can find a AI prompt that works well with Diffalump in [prompt.txt](prompt.txt)
++You can find a AI prompt that works well with Diffalump in [prompt.md](prompt.md)
+ 
+ ## License
+ 
+ MIT License
+diff --git c/pyproject.toml w/pyproject.toml
+index b4fba60..504dfda 100644
+
+@@ -11,7 +11,8 @@ dependencies = [
+ ]
+ 
+ [dependency-groups]
+ dev = [
+     "icecream>=2.1.5",
++    "pytest>=8.4.1",
+     "wat>=0.6.0",
+ ]
+diff --git c/prompt.txt w/prompt.md
+similarity index 100%
+rename from prompt.txt
+rename to prompt.md
+

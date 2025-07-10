@@ -1,14 +1,13 @@
-import io
-import itertools
-import uuid
+import re
+import tempfile
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 from typing import DefaultDict, Iterable, cast
 
 import click
 from git import Repo
 from unidiff import Hunk, PatchedFile, PatchSet
-from unidiff.patch import Line
 
 MAX_CHUNK_LINES = 100
 CONTEXT_LINE_COUNT = 5
@@ -39,6 +38,12 @@ class DiffChunker:
     def _chunk(self, file_patch: PatchedFile) -> Iterable[tuple[int, list[Hunk]]]:
         current_chunk_size = 0
         chunk: list[Hunk] = list()
+
+        if file_patch.is_rename and not file_patch:
+            # A plain rename with no other changes
+            yield 0, []
+            return
+
         for hunk in file_patch:
             hunk_size = max(
                 sum(1 for line in hunk if line.is_added),
@@ -50,7 +55,7 @@ class DiffChunker:
             ):
                 yield current_chunk_size, chunk
                 current_chunk_size = 0
-                chunk.clear()
+                chunk = list()
 
             current_chunk_size += hunk_size
             chunk.append(hunk)
@@ -87,9 +92,16 @@ class DiffChunker:
 
 
 class Diffalump:
-    @staticmethod
+    def __init__(self, output_dir: Path, prefix: str):
+        self.output_dir = output_dir
+        self.prefix = prefix
+
     def get_git_diff(
-        directory: str, base: str, target: str, exclude: tuple[str, ...]
+        self,
+        directory: str,
+        base: str,
+        target: str,
+        exclude: tuple[str, ...],
     ) -> PatchSet:
         repo = Repo(directory)
         diff_args = [f"{base}..{target}"]
@@ -102,15 +114,16 @@ class Diffalump:
         )
         return PatchSet(diff_text)
 
-    @staticmethod
-    def chunk_patchset(patch_set: PatchSet, output: io.StringIO) -> None:
+    def chunk_patchset(self, patch_set: PatchSet) -> int:
+        index = 0
         for index, file_chunks in enumerate(DiffChunker(patch_set).chunks):
-            output.write(("<" * 50) + f" START CHUNK: [{index+1:03}]\n")
-            for file in file_chunks:
-                output.write(str(file.file.patch_info) + "\n")
-                for hunk in file.hunks:
-                    output.write(hunk)
-            output.write((">" * 50) + f" END CHUNK: [{index+1:03}]\n")
+            output = self.output_dir / f"{self.prefix}__{index+1:03}.diff"
+            with open(output, "w") as f:
+                for file in file_chunks:
+                    f.write(str(file.file.patch_info) + "\n")
+                    for hunk in file.hunks:
+                        f.write(hunk)
+        return index + 1
 
 
 @click.command(name="diffalump")
@@ -128,10 +141,22 @@ class Diffalump:
 )
 @click.option(
     "-o",
-    "--output",
-    type=click.File("w"),
-    default="-",
-    help="Output file (defaults to stdout).",
+    "--output-dir",
+    type=click.Path(
+        exists=False,
+        file_okay=False,
+        dir_okay=True,
+        writable=True,
+        path_type=Path,
+    ),
+    default=None,
+    help="Output directory for chunk files (defaults to creating a temporary directory).",
+)
+@click.option(
+    "-p",
+    "--prefix",
+    default=None,
+    help="Prefix for output files (defaults to base_branch-target_branch).",
 )
 @click.option(
     "-e",
@@ -143,9 +168,10 @@ class Diffalump:
 def main(
     directory: str,
     base_branch: str,
-    output: io.StringIO,
-    target_branch: str,
+    output_dir: Path | None,
+    prefix: str | None,
     exclude: tuple[str, ...],
+    target_branch: str,
 ):
     """
     Diffalump - Intelligently chunk Git diffs for easier AI code review.
@@ -154,9 +180,39 @@ def main(
     for the AI to review. Large files are split appropriately while small changes
     are combined together.
     """
-    Diffalump.chunk_patchset(
-        Diffalump.get_git_diff(directory, base_branch, target_branch, exclude), output
+    # Create output directory if not provided
+    if output_dir is None:
+        output_dir = Path(tempfile.mkdtemp())
+
+    # Create output directory if it doesn't exist
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create prefix if not provided
+    if prefix is None:
+        prefix = re.sub(
+            r"__*",
+            "_",
+            f"{base_branch}-{target_branch}".translate(
+                str.maketrans(
+                    {
+                        "/": "-",
+                        " ": "_",
+                    }
+                )
+            ),
+        )
+
+    app = Diffalump(output_dir, prefix)
+    count = app.chunk_patchset(
+        app.get_git_diff(
+            directory,
+            base_branch,
+            target_branch,
+            exclude,
+        )
     )
+
+    print(f"Wrote {count} chunk files to:", output_dir)
 
 
 if __name__ == "__main__":
