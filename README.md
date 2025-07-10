@@ -24,6 +24,8 @@ uv run python main.py
 
 You can find a AI prompt that works well with Diffalump in [prompt.md](prompt.md)
 
+When using ChatGPT, using `o4-mini-high` is recommended.
+
 ## License
 
 MIT License
