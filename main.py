@@ -120,7 +120,7 @@ class Diffalump:
             output = self.output_dir / f"{self.prefix}__{index+1:03}.diff"
             with open(output, "w") as f:
                 for file in file_chunks:
-                    f.write(str(file.file.patch_info) + "\n")
+                    f.write(f"\n\n{file.file.patch_info}\n")
                     for hunk in file.hunks:
                         f.write(hunk)
         return index + 1
