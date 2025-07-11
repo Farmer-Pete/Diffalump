@@ -164,14 +164,19 @@ class Diffalump:
     multiple=True,
     help="Paths to exclude from the diff (can be specified multiple times)",
 )
-@click.argument("target_branch")
+@click.option(
+    "-t",
+    "--target-branch",
+    default=None,
+    help="Target branch for comparison (defaults to current branch)",
+)
 def main(
     directory: str,
     base_branch: str,
     output_dir: Path | None,
     prefix: str | None,
     exclude: tuple[str, ...],
-    target_branch: str,
+    target_branch: str | None,
 ):
     """
     Diffalump - Intelligently chunk Git diffs for easier AI code review.
@@ -180,6 +185,15 @@ def main(
     for the AI to review. Large files are split appropriately while small changes
     are combined together.
     """
+    # Get current branch if target_branch is not provided
+    if target_branch is None:
+        repo = Repo(directory)
+        try:
+            target_branch = repo.active_branch.name
+        except TypeError:
+            # Handle detached HEAD state
+            target_branch = repo.head.commit.hexsha[:8]
+
     # Create output directory if not provided
     if output_dir is None:
         output_dir = Path(tempfile.mkdtemp())

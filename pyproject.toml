@@ -1,18 +1,13 @@
 [project]
-name = "code-review"
+name = "Diffalump"
 version = "0.1.0"
-description = "Add your description here"
+description = "A tool for creating diffs for AI code reviews"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = [
-    "click>=8.2.1",
-    "gitpython>=3.1.44",
-    "unidiff>=0.7.5",
-]
+dependencies = ["click>=8.2.1", "gitpython>=3.1.44", "unidiff>=0.7.5"]
+
+[project.scripts]
+diffalump = "main:main"
 
 [dependency-groups]
-dev = [
-    "icecream>=2.1.5",
-    "pytest>=8.4.1",
-    "wat>=0.6.0",
-]
+dev = ["icecream>=2.1.5", "pytest>=8.4.1", "wat>=0.6.0"]
